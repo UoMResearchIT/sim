@@ -7,8 +7,8 @@ function sim_create()
 {
     cores=1
     walltime="100:00:00:00"
-    config="rdf"
-    inputdata="/nerc/n02/n02/amethyst/new_files"
+    config=default
+    input=
 
     while [ $# -gt 0 ]; do
         if [ $1 = "--cores" ]; then
@@ -16,6 +16,12 @@ function sim_create()
             shift 2
         elif [ $1 = "--walltime" ]; then
             walltime="$2"
+            shift 2
+        elif [ $1 = "--input" ]; then
+            input="$2"
+            shift 2
+        elif [ $1 = "--config" ]; then
+            config="$2"
             shift 2
         elif [[ $1 =~ '-.*' ]]; then
             echo "Unrecognised option $1" >2
@@ -30,54 +36,64 @@ function sim_create()
 
     mkdir $simdir
     mkdir $simdir/code
-    mkdir $simdir/results
     mkdir $simdir/meta
 
-    cp -a src/cape_code.py $simdir/code
-    cp -a src/function_codes.py $simdir/code
-    cp -a src/map_code.py $simdir/code
-    rsync -a --exclude .git --exclude staticdata src/MetPy $simdir/code
-    cp -a bin/run.sh $simdir
-
-    # conda list --export >${simdir}/meta/conda.txt
-
     # Git version information
-    # echo "CAPECode:" >>${simdir}/meta/git.txt
-    # git describe --dirty >>${simdir}/meta/git.txt
-    if [ -r src/MetPy ]; then
-        (cd src/MetPy; echo "MetPy:"; git describe --dirty; git diff) >>${simdir}/meta/git.txt
+    git describe --dirty >>${simdir}/meta/git.txt
+
+    configdir=configs/$config
+
+    if [ ! -r $configdir ]; then
+        echo "Cannot read config directory $configdir" >&2
+        exit 1
     fi
 
-    cp -a configs/$config/setup.sh ${simdir}
+    if [ -r $configdir/setup.sh ]; then
+        cp -a $configdir/setup.sh ${simdir}
+    fi
 
     # Create submission script
 
-    cp -a configs/$config/submit.sh ${simdir}
+    if [ -r $configdir/submit.sh ]; then
+        cp -a $configdir/submit.sh ${simdir}
+    fi
 
-    sed -i.bak "s/@CORES@/${cores}/" $simdir/submit.sh
-    sed -i.bak "s/@WALLTIME@/${walltime}/" $simdir/submit.sh
+    if [ -r simhooks/sim-run ]; then
+        cp -a simhooks/sim-run ${simdir}
+    fi
 
-    outfile=results/batchlog.txt
-    sed -i.bak "s|@OUTFILE@|${outfile}|" $simdir/submit.sh
 
-    simname=${simdir##*/}
-    sed -i.bak "s/@SIMNAME@/${simname}/" $simdir/submit.sh
+    if [ -r $simdir/submit.sh ]; then
+        sed -i.bak "s/@CORES@/${cores}/" $simdir/submit.sh
+        sed -i.bak "s/@WALLTIME@/${walltime}/" $simdir/submit.sh
 
-    rm -f $simdir/submit.sh.bak
+        outfile=batchlog.txt
+        sed -i.bak "s|@OUTFILE@|${outfile}|" $simdir/submit.sh
 
-    inputdata_abs=$(python -c 'import os; import sys; print(os.path.abspath(sys.argv[1]))' $inputdata)
+        simname=${simdir##*/}
+        sed -i.bak "s/@SIMNAME@/${simname}/" $simdir/submit.sh
 
-    ln -s ${inputdata_abs} $simdir/inputdata
-    
-    echo >> $simdir/submit.sh
-    echo "env >meta/env.txt" >> $simdir/submit.sh
-    echo "stdbuf -oL -eL ./run.sh >>results/log.txt 2>&1" >> $simdir/submit.sh
+        rm -f $simdir/submit.sh.bak
+
+        echo >> $simdir/submit.sh
+        echo "env >meta/env.txt" >> $simdir/submit.sh
+        echo "if [ -r setup.sh ]; then source ./setup.sh; fi" >> $simdir/submit.sh
+        echo "exec >log.txt 2>&1" >> $simdir/submit.sh
+        echo "./sim-run" >> $simdir/submit.sh
+    fi
 
     # Write simulation properties
     cat >$simdir/meta/properties.sh <<EOF 
 CORES=${cores}
 WALLTIME=${walltime}
 EOF
+
+    if [ -r ${simdir}/setup.sh ]; then
+        source ${simdir}/setup.sh
+    fi
+
+    # Application-specific simulation creation
+    simhooks/sim-create $simdir $input
 }
 
 # Create and submit a new simulation, or submit an existing simulation
@@ -99,7 +115,7 @@ function sim_submit()
 
     simdir=$1
 
-    if [ -r $simdir/results/log.txt -a ! $continue_sim ]; then
+    if [ -r $simdir/log.txt -a ! $continue_sim ]; then
         echo "Simulation $simdir has already been run" >&2
         exit 1
     fi
@@ -131,7 +147,7 @@ function sim_continue()
 {
     simdir=$1
 
-    if [ ! -r $simdir/results/log.txt ]; then
+    if [ ! -r $simdir/log.txt ]; then
         echo "Simulation $simdir has not been run; cannot be continued" >&2
         exit 1
     fi

@@ -9,6 +9,7 @@ function sim_create()
     walltime="100:00:00:00"
     config=default
     input=
+    app_args=()
 
     while [ $# -gt 0 ]; do
         if [ $1 = "--cores" ]; then
@@ -23,15 +24,25 @@ function sim_create()
         elif [ $1 = "--config" ]; then
             config="$2"
             shift 2
-        elif [[ $1 =~ '-.*' ]]; then
-            echo "Unrecognised option $1" >2
-            exit 1
+        elif [[ $1 =~ -.* ]]; then
+            # Unrecognised arguments are passed to the application
+            # hook, and are assumed to be of the form --OPTNAME OPTVAL
+            app_args+=("$1" "$2")
+            echo "Passing $1 $2 to application"
+            shift 2
         else
-            break
+            # First non-option argument must be the simulation directory
+            if [ $# != 1 ]; then
+                echo "$0: Too many arguments: ${@}" >&2
+                echo "Usage: sim create [options] <simdir>" >&2
+                exit 1
+            else
+                simdir=$1
+                shift
+            fi
         fi
     done
 
-    simdir=$1
     echo "Creating simulation $simdir"
 
     mkdir $simdir
@@ -52,8 +63,6 @@ function sim_create()
         cp -a $configdir/setup.sh ${simdir}
     fi
 
-    # Create submission script
-
     if [ -r $configdir/submit.sh ]; then
         cp -a $configdir/submit.sh ${simdir}
     fi
@@ -62,8 +71,8 @@ function sim_create()
         cp -a simhooks/sim-run ${simdir}
     fi
 
-
     if [ -r $simdir/submit.sh ]; then
+        # Configure the submission script
         sed -i.bak "s/@CORES@/${cores}/" $simdir/submit.sh
         sed -i.bak "s/@WALLTIME@/${walltime}/" $simdir/submit.sh
 
@@ -93,27 +102,34 @@ EOF
     fi
 
     # Application-specific simulation creation
-    simhooks/sim-create $simdir $input
+    app_args+=(${simdir})
+    simhooks/sim-create "${app_args[@]}"
 }
 
 # Create and submit a new simulation, or submit an existing simulation
 function sim_submit()
 {
-    opts=()
+    create_args=()
     continue_sim=0
 
     while [ $# -gt 0 ]; do
         if [ $1 = "--continue" ]; then
             continue_sim=1
         elif [[ $1 =~ -.* ]]; then
-            opts+=("$1" "$2")
+            create_args+=("$1" "$2")
             shift 2
         else
-            break
+            # First non-option argument must be the simulation directory
+            if [ $# != 1 ]; then
+                echo "$0: Too many arguments" >&2
+                echo "Usage: sim submit [options] <simdir>" >&2
+                exit 1
+            else
+                simdir=$1
+                shift
+            fi
         fi
     done
-
-    simdir=$1
 
     if [ -r $simdir/log.txt -a ! $continue_sim ]; then
         echo "Simulation $simdir has already been run" >&2
@@ -123,13 +139,10 @@ function sim_submit()
     # Create the simulation using the provided opts if it does not
     # already exist
     if [ ! -r $simdir ]; then
-        if [ ${#opts[@]} = 0 ]; then
-            sim_create $simdir
-        else
-            sim_create "${opts[@]}" $simdir
-        fi
+        create_args+=($simdir)
+        sim_create "${create_args[@]}"
     else
-        if [ ${#opts[@]} != 0 ]; then
+        if [ ${#create_args[@]} != 0 ]; then
             echo "Cannot pass simulation creation options to sim submit when submitting an existing simulation" >&2
             exit 1
         fi

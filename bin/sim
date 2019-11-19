@@ -83,8 +83,13 @@ function sim_create()
         outfile=batchlog.txt
         sed -i.bak "s|@OUTFILE@|${outfile}|" $simdir/submit.sh
 
-        simname=${simdir##*/}
-        sed -i.bak "s/@SIMNAME@/${simname}/" $simdir/submit.sh
+        if [ -r simhooks/sim-name ]; then
+            simname=$(simhooks/sim-name $simdir)
+        else
+            simname=${simdir##*/}
+        fi
+
+        simname=$(sed 's|/|-|g' <<< "$simname") # Escape / because SGE doesn't allow it in job names
 
         rm -f $simdir/submit.sh.bak
 

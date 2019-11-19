@@ -28,7 +28,6 @@ function sim_create()
             # Unrecognised arguments are passed to the application
             # hook, and are assumed to be of the form --OPTNAME OPTVAL
             app_args+=("$1" "$2")
-            echo "Passing $1 $2 to application"
             shift 2
         else
             # First non-option argument must be the simulation directory

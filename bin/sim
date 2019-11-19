@@ -90,6 +90,10 @@ function sim_create()
         fi
 
         simname=$(sed 's|/|-|g' <<< "$simname") # Escape / because SGE doesn't allow it in job names
+        
+        # See https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern
+        simname_sed_escaped=$(sed -e 's/[\/&]/\\&/g' <<< "${simname}")
+        sed -i.bak "s/@SIMNAME@/${simname_sed_escaped}/" $simdir/submit.sh
 
         rm -f $simdir/submit.sh.bak
 

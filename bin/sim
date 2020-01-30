@@ -133,6 +133,10 @@ function sim_submit()
         if [ $1 = "--continue" ]; then
             continue_sim=1
         elif [[ $1 =~ -.* ]]; then
+            if [ $# -lt 2 ]; then
+                echo "sim_submit: Option $1 specified without a value" >&2
+                exit 1
+            fi
             create_args+=("$1" "$2")
             shift 2
         else

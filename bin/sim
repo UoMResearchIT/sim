@@ -102,6 +102,7 @@ function sim_create()
 
         echo >> $simdir/submit.sh
         echo "env >meta/env.txt" >> $simdir/submit.sh
+        echo "lscpu >meta/lscpu.txt" >> $simdir/submit.sh
         echo "if [ -r setup.sh ]; then source ./setup.sh; fi" >> $simdir/submit.sh
         echo "exec >log.txt 2>&1" >> $simdir/submit.sh
         echo "./sim-run" >> $simdir/submit.sh

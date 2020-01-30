@@ -53,8 +53,11 @@ function sim_create()
     mkdir $simdir/code
     mkdir $simdir/meta
 
-    # Git version information
-    git describe --dirty >>${simdir}/meta/git.txt
+    if [ -r .git ]; then
+        # Git version information
+        git describe --dirty >${simdir}/meta/git-describe.txt
+        git diff >${simdir}/meta/git-diff.txt
+    fi
 
     configdir=configs/$config
 

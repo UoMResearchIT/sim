@@ -113,5 +113,18 @@ fi
     cd ${simdir}/code
     mkdir -p obj
     echo "Compiling LUMA (see $PWD/make.log)"
-    nice make -j 8 >make.log 2>&1
+    opts=(dummy=dummy)
+    if [ -n "${LUMA_CFLAGS+1}" ]; then
+        opts+=(CFLAGS="${LUMA_CFLAGS}")
+    fi
+    if [ -n "${LUMA_LDFLAGS+1}" ]; then
+        opts+=(LDFLAGS="${LUMA_LDFLAGS}")
+    fi
+
+    if ! nice make -j 8 "${opts[@]}" >make.log 2>&1; then
+        echo "Compilation failed. End of make.log is:"
+        tail -n 100 make.log
+        exit 1
+    fi
 )
+echo "sim-create done"

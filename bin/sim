@@ -270,4 +270,4 @@ fi
 
 shift
 
-eval "sim_$command ${@}"
+eval "sim_$command ${@-}"

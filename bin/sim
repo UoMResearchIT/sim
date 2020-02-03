@@ -210,6 +210,8 @@ function sim_continue()
 
 # Must be run from the code directory
 
+simtoolpath=${BASH_SOURCE%/bin/sim}
+
 # Usage message
 if [ $# -lt 1 ]; then
     cat<<EOF
@@ -225,8 +227,6 @@ Use sim COMMAND --help for help on individual subcommands
 EOF
     exit 0
 fi
-
-simtoolpath=sim
 
 # Detect which code we are running with
 code=""

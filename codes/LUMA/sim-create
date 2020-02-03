@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# Create a LUMA simulation in the given directory.  Run from the
+# top-level LUMA directory.
+
+set -e
+set -u
+
+params=()
+# geometry_params=()
+
+# Parse arguments
+while [ $# -gt 0 ]; do
+    if [ $1 = "--case" ]; then
+        casedir="$2"
+        shift 2
+    elif [ $1 = "--res" ]; then
+        res="$2"
+        shift 2
+    # elif [ $1 = "--inlet-velocity" ]; then
+    #     inlet_velocity="$2"
+    #     shift 2
+    elif [ $1 = "--set-param" ]; then
+        params+=("$2")
+        shift 2
+    # elif [ $1 = "--set-geometry" ]; then
+    #     geometry_params+=("$2")
+    #     shift 2
+    elif [[ $1 =~ ^-.* ]]; then
+        echo "Error: Unrecognised option $1" >&2
+        exit 1
+    else
+        # First non-option argument must be the simulation directory
+        if [ $# != 1 ]; then
+            echo "$0: Too many arguments" >&2
+            echo "Usage: sim create [options] <simdir>" >&2
+            exit 1
+        else
+            simdir=$1
+            shift
+        fi
+    fi
+done
+
+if [ -z "${casedir+x}" ]; then
+    echo "$0: Error: No --case argument supplied" >&2
+    exit 1
+fi
+
+# Copy files into simulation directory
+rsync -a inc input makefile src ${simdir}/code/
+rsync -a $casedir/geometry.config ${simdir}/input/
+rsync -a $casedir/definitions.h ${simdir}/code/inc/
+
+mkdir $simdir/Results
+
+# Customise resolution if res is set
+if [ -n "${res+x}" ]; then
+    sed -i.bak "s/#define L_RESOLUTION .*/#define L_RESOLUTION ${res}/" ${simdir}/code/inc/definitions.h
+fi
+
+# # Customise inlet velocity if set
+# if [ -n "${inlet_velocity+x}" ]; then
+#     inlet_velocity_for_sed=$(sed -e 's/[\/&]/\\&/g' <<< "${inlet_velocity}")
+#     sed -i.bak "s/uxInlet_p = .*;/uxInlet_p = ${inlet_velocity_for_sed};/" ${simdir}/code/inc/params.h
+# fi
+
+# Customise parameters
+if [ ${#params[@]} -gt 0 ]; then
+    for param in "${params[@]}"; do
+        if [[ "${param}" =~ ^([[:alnum:]_]+)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            # Matches par=val
+            param_name="${BASH_REMATCH[1]}"
+            val="${BASH_REMATCH[2]}"
+            val_for_sed=$(sed -e 's/[\/&]/\\&/g' <<< "${val}")
+            param_name_for_sed=$(sed -e 's/[]\/$*.^[]/\\&/g' <<< "${param_name}")
+            pattern="#define ${param_name_for_sed}\\>.*$"
+            if grep -E -q "${pattern}" ${simdir}/code/inc/definitions.h; then
+                sed -r -i.bak "s/${pattern}/#define ${param_name} ${val_for_sed}/" ${simdir}/code/inc/definitions.h
+            else
+                echo "Error: Cannot set $param because definitions.h does not contain an assignment to $param_name" >&2
+                exit 1
+            fi
+        else
+            echo "Error: Cannot parse parameter setting as par=val" >&2
+            exit 1
+        fi
+    done
+fi
+
+# # Customise geometry
+# if [ ${#geometry_params[@]} -gt 0 ]; then
+#     for geometry_param in "${geometry_params[@]}"; do
+#         if [[ "${geometry_param}" =~ ^([[:digit:]]+),([[:digit:]]+)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+#             # Matches i,j=val
+#             id="${BASH_REMATCH[1]}"
+#             field="${BASH_REMATCH[2]}"
+#             val="${BASH_REMATCH[3]}"
+#             awk -v id="${id}" -v field="${field}" -v val="${val}" '/^[ \t]*#/ {print; next} NF >= 3 && $3 == id {$field = val; print; val_set=1; next} {print} END {if (!val_set) {print "Error: Body " id " not found in geometry.config" >"/dev/stderr"; exit(1)}}' ${simdir}/input/geometry.config > ${simdir}/input/geometry.config.mod
+#             mv ${simdir}/input/geometry.config.mod ${simdir}/input/geometry.config
+#         else
+#             echo "Error: Cannot parse geometry setting as id,field=val" >&2
+#             exit 1
+#         fi
+#     done
+# fi
+
+# rm -f ${simdir}/code/inc/params.h.bak
+
+# Compile the executable
+(
+    set -e
+    cd ${simdir}/code
+    mkdir -p obj
+    echo "Compiling LUMA (see $PWD/make.log)"
+    nice make -j 8 >make.log 2>&1
+)

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+[[ "$(hostname)" =~ .*\.csf3\.alces\.network ]]

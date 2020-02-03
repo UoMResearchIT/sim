@@ -3,6 +3,10 @@
 set -e
 set -u
 
+###############################################################################
+# Functions
+###############################################################################
+
 function sim_create()
 {
     cores=1
@@ -59,7 +63,7 @@ function sim_create()
         git diff >${simdir}/meta/git-diff.txt
     fi
 
-    configdir=configs/$config
+    configdir=$simtoolpath/codes/$code/configs/$config
 
     if [ ! -r $configdir ]; then
         echo "Cannot read config directory $configdir" >&2
@@ -74,8 +78,8 @@ function sim_create()
         cp -a $configdir/submit.sh ${simdir}
     fi
 
-    if [ -r simhooks/sim-run ]; then
-        cp -a simhooks/sim-run ${simdir}
+    if [ -r $simtoolpath/codes/$code/sim-run ]; then
+        cp -a $simtoolpath/codes/$code/sim-run ${simdir}
     fi
 
     if [ -r $simdir/submit.sh ]; then
@@ -86,8 +90,8 @@ function sim_create()
         outfile=batchlog.txt
         sed -i.bak "s|@OUTFILE@|${outfile}|" $simdir/submit.sh
 
-        if [ -r simhooks/sim-name ]; then
-            simname=$(simhooks/sim-name $simdir)
+        if [ -r $simtoolpath/codes/$code/sim-name ]; then
+            simname=$($simtoolpath/codes/$code/sim-name $simdir)
         else
             simname=${simdir##*/}
         fi
@@ -120,7 +124,7 @@ EOF
 
     # Application-specific simulation creation
     app_args+=(${simdir})
-    simhooks/sim-create "${app_args[@]}"
+    $simtoolpath/codes/$code/sim-create "${app_args[@]}"
 }
 
 # Create and submit a new simulation, or submit an existing simulation
@@ -192,6 +196,45 @@ function sim_continue()
     qsub submit.sh
 }
 
+###############################################################################
+# Main
+###############################################################################
+
+# Must be run from the code directory
+
+simtoolpath=sim
+
+# Detect which code we are running with
+code=""
+for codedir in $simtoolpath/codes/*; do
+    if $codedir/sim-detect; then
+        code=$(basename $codedir)
+        break
+    fi
+done
+
+if [ "$code" = "" ]; then
+    echo "$0: Cannot determine code for directory $PWD" >&2
+    exit 1
+fi
+
+# Detect which config we should use
+
+config=""
+for configdir in $simtoolpath/codes/$code/configs/*; do
+    if [ -r $configdir/config-detect ] && $configdir/config-detect; then
+        config=$(basename $configdir)
+        break
+    fi
+done
+
+if [ "$config" = "" ]; then
+    echo "$0: Cannot determine config for directory $PWD" >&2
+    exit 1
+    # TODO: allow user to override on the command line
+fi
+
+echo "Running with config $config"
 
 command=$1
 shift

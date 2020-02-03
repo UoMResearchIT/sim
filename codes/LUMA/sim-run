@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Run a LUMA simulation
+
+#set -e
+set -u
+
+echo "Running LUMA"
+mpirun -n $NSLOTS code/LUMA
+#mpirun -n 1 perf record --call-graph lbr -e cycles -F 2000 code/LUMA : -n $((NSLOTS-1)) code/LUMA
+retcode=$?
+echo "LUMA exited with code $retcode"
+if [ $retcode = 99 ]; then
+    echo "Modifying return code to avoid resubmission"
+    retcode=1
+fi
+
+# echo "Generating performance report"
+# perf report > perf-report.txt
+# echo "Performance report written to perf-report.txt"
+
+exit $retcode

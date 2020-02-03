@@ -1,0 +1,3 @@
+#!/bin/bash
+
+test "$(sysctl -n kern.hostname)" == "Ian-Hinders-MacBook-Pro.local"

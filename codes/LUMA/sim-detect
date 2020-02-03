@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Determine whether this is a LUMA code directory
+
+grep "Running LUMA" src/main_lbm.cpp >/dev/null 2>&1

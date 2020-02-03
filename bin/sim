@@ -11,7 +11,7 @@ function sim_create()
 {
     cores=1
     walltime="100:00:00:00"
-    config=default
+    config=$CONFIG
     input=
     app_args=()
 
@@ -236,6 +236,7 @@ fi
 
 echo "Running with config $config"
 
+CONFIG=$config
 command=$1
 shift
 

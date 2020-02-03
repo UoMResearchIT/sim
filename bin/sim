@@ -134,7 +134,15 @@ function sim_submit()
     continue_sim=0
 
     while [ $# -gt 0 ]; do
-        if [ $1 = "--continue" ]; then
+        if [ $1 = "--help" ]; then
+            cat <<EOF "Usage: sim submit [OPTION]... DIR"
+Submit a simulation from directory DIR.  If DIR is not an existing simulation, create it.
+
+Options:
+  --continue    Continue an existing simulation
+EOF
+            exit 0
+        elif [ $1 = "--continue" ]; then
             continue_sim=1
         elif [[ $1 =~ ^-.* ]]; then
             if [ $# -lt 2 ]; then
@@ -202,6 +210,22 @@ function sim_continue()
 
 # Must be run from the code directory
 
+# Usage message
+if [ $# -lt 1 ]; then
+    cat<<EOF
+Usage: $0 COMMAND [OPTIONS]
+
+COMMAND can be one of
+
+  create       Create a new simulation
+  submit       Submit an existing or new simulation
+  continue     Start an existing simulation that has already run
+
+Use sim COMMAND --help for help on individual subcommands
+EOF
+    exit 0
+fi
+
 simtoolpath=sim
 
 # Detect which code we are running with
@@ -238,6 +262,12 @@ echo "Running with config $config"
 
 CONFIG=$config
 command=$1
+
+if ! type -t "sim_$command" >/dev/null; then
+    echo "$0: $command is not a recognised subcommand" >&2
+    exit 1
+fi
+
 shift
 
 eval "sim_$command ${@}"

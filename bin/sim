@@ -253,7 +253,7 @@ for configdir in $simtoolpath/codes/$code/configs/*; do
 done
 
 if [ "$config" = "" ]; then
-    echo "$0: Cannot determine config for directory $PWD" >&2
+    echo "$0: Cannot automatically determine config to use on this machine" >&2
     exit 1
     # TODO: allow user to override on the command line
 fi

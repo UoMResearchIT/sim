@@ -59,7 +59,7 @@ function sim_create()
 
     if [ -r .git ]; then
         # Git version information
-        git describe --dirty >${simdir}/meta/git-describe.txt
+        git describe --always --dirty >${simdir}/meta/git-describe.txt
         git diff >${simdir}/meta/git-diff.txt
     fi
 

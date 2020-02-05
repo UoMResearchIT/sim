@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Run a LIFE simulation
+
+#set -e
+set -u
+
+export OMP_NUM_THREADS=$NSLOTS
+code/LIFE
+retcode=$?
+echo "LIFE exited with code $retcode"
+if [ $retcode = 99 ]; then
+    echo "Modifying return code to avoid resubmission"
+    retcode=1
+fi
+exit $retcode

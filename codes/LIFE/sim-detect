@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Determine whether this is a LUMA code directory
+
+grep "LIFE: Lattice boltzmann-Immersed boundary-Finite Element" src/main.cpp >/dev/null 2>&1

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Return the name to use for a simulation given the simulation
+# directory as an argument
+
+set -e
+set -u
+
+simdir=$1
+
+# Use the last two components of the path, or the path itself if there
+# is only one component.  Usually, the last component will be
+# something like "res2", so we want to have more than just that.
+
+if [[ "$simdir" =~ ([^/]+/+[^/]+)/*$ ]]; then
+    simname="${BASH_REMATCH[1]}"
+else
+    simname=$simdir
+fi
+
+echo $simname

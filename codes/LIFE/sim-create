@@ -113,5 +113,11 @@ rm -f ${simdir}/code/inc/params.h.bak
     cd ${simdir}/code
     mkdir -p obj
     echo "Compiling LIFE (see $PWD/make.log)"
-    nice make -j 8 >make.log 2>&1
+
+    if ! nice make -j 8 >make.log 2>&1; then
+        echo "Compilation failed. End of make.log is:"
+        tail -n 100 make.log
+        exit 1
+    fi
+
 )

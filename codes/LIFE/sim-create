@@ -48,7 +48,7 @@ if [ -z "${casedir+x}" ]; then
 fi
 
 # Copy files into simulation directory
-rsync -a inc input makefile src bin ${simdir}/code/
+rsync -a inc input makefile src ${simdir}/code/
 rsync -a $casedir/input/ ${simdir}/input/
 rsync -a $casedir/params.h ${simdir}/code/inc/
 

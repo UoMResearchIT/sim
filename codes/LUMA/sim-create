@@ -118,7 +118,7 @@ fi
         opts+=(CFLAGS="${LUMA_CFLAGS}")
     fi
     if [ -n "${LUMA_LDFLAGS+1}" ]; then
-        opts+=(LDFLAGS="${LUMA_LDFLAGS}")
+        opts+=(LIB="${LUMA_LDFLAGS}")
     fi
 
     if ! nice make -j 8 "${opts[@]}" >make.log 2>&1; then

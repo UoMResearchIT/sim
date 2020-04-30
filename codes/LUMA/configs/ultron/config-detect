@@ -1,0 +1,3 @@
+#!/bin/bash
+
+[[ "$(hostname)" =~ e-uxxmegbczd01\.mace\.manchester\.ac\.uk ]]

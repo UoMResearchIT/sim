@@ -184,7 +184,12 @@ EOF
     echo "Submitting simulation $simdir"
 
     cd $simdir
-    qsub submit.sh
+    if which qsub >/dev/null; then
+        qsub submit.sh
+    else
+        echo "Running submit script interactively, as no qsub found"
+        ./submit.sh
+    fi
 }
 
 # Continue an existing simulation by resubmitting it in the same

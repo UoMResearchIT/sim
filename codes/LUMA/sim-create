@@ -42,15 +42,20 @@ while [ $# -gt 0 ]; do
     fi
 done
 
-if [ -z "${casedir+x}" ]; then
-    echo "$0: Error: No --case argument supplied" >&2
-    exit 1
-fi
+# if [ -z "${casedir+x}" ]; then
+#     echo "$0: Error: No --case argument supplied" >&2
+#     exit 1
+# fi
 
 # Copy files into simulation directory
 rsync -a inc input makefile src ${simdir}/code/
-rsync -a $casedir/geometry.config ${simdir}/input/
-rsync -a $casedir/definitions.h ${simdir}/code/inc/
+
+if [ -n "${casedir+x}" ]; then
+    rsync -a $casedir/geometry.config ${simdir}/input/
+    rsync -a $casedir/definitions.h ${simdir}/code/inc/
+else
+    rsync -a $simdir/code/input/geometry.config ${simdir}/input/
+fi
 
 mkdir $simdir/Results
 
